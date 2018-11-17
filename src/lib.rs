@@ -245,6 +245,7 @@ impl Game {
         // check for game over conditions of the full board
         if let Some(result) = check_result(&self.outer_board) {
             self.state = GameState::GameOver(result);
+            self.active_outer_square = None;
         }
 
         Ok(())

@@ -63,6 +63,7 @@ pub struct JsGame {
     pub grid: [[JsInnerGrid; SIZE]; SIZE],
     pub turn: JsPiece,
     pub state: String,
+    #[serde(rename = "activeOuterSquare")]
     pub active_outer_square: Option<JsCoord>,
 }
 
