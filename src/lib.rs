@@ -2,8 +2,8 @@ pub const SIZE: usize = 3;
 
 #[derive(Copy, Clone, PartialEq, Debug)]
 pub struct Coord {
-    x: usize,
-    y: usize,
+    pub x: usize,
+    pub y: usize,
 }
 
 impl Coord {
@@ -119,11 +119,11 @@ pub enum GameState {
 }
 
 pub struct Game {
-    state: GameState,
-    board: [[[[Square; SIZE]; SIZE]; SIZE]; SIZE],
-    outer_board: [[OuterSquare; SIZE]; SIZE],
-    turn: Piece,
-    active_outer_square: Option<Coord>,
+    pub state: GameState,
+    pub board: [[[[Square; SIZE]; SIZE]; SIZE]; SIZE],
+    pub outer_board: [[OuterSquare; SIZE]; SIZE],
+    pub turn: Piece,
+    pub active_outer_square: Option<Coord>,
 }
 
 impl Game {

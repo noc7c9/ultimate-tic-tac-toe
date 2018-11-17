@@ -1,0 +1,25 @@
+[package]
+name = "ultimate_tic_tac_toe_wasm_bindings"
+version = "0.1.0"
+authors = ["Athir Saleem <noc7c9@gmail.com>"]
+
+[lib]
+crate-type = ["cdylib", "rlib"]
+
+[features]
+default = ["console_error_panic_hook"]
+
+[dependencies]
+ultimate_tic_tac_toe = { version = "0.1.0", path = "../" }
+cfg-if = "^0.1.2"
+serde = "^1.0.80"
+serde_derive = "^1.0.80"
+console_error_panic_hook = { version = "0.1.1", optional = true }
+
+[dependencies.wasm-bindgen]
+version = "^0.2"
+features = ["serde-serialize"]
+
+[profile.release]
+# optimize for small code size
+opt-level = "s"
