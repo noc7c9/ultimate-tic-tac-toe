@@ -4,23 +4,46 @@ import styled, { createGlobalStyle } from 'styled-components';
 const range = length => [...Array(length).keys()];
 const grid3x3 = range(3).flatMap(y => range(3).map(x => ({ x, y })));
 
-const colors = {
-    highlight: '#ddc4de',
+const colorPalette = {
     x: {
         normal: '#1676b4',
-        dark1: '#06568a',
-        dark2: '#033d63',
         light1: '#438dbd',
         light2: '#82b5d6',
     },
     o: {
         normal: '#ff9611',
-        dark1: '#d87a00',
-        dark2: '#9a5700',
         light1: '#ffb350',
         light2: '#ffd195',
     },
 }
+
+const colors = {
+    highlight: '#ddc4de',
+    x: {
+        hover: colorPalette.x.light2,
+        fill: colorPalette.x.normal,
+        background: {
+            solid: colorPalette.x.light2,
+            overlay: `${colorPalette.x.light2}80`,
+        },
+        backgroundDarker: {
+            solid: colorPalette.x.light1,
+            overlay: `${colorPalette.x.light1}cc`,
+        },
+    },
+    o: {
+        hover: colorPalette.o.light2,
+        fill: colorPalette.o.normal,
+        background: {
+            solid: colorPalette.o.light2,
+            overlay: `${colorPalette.o.light2}80`,
+        },
+        backgroundDarker: {
+            solid: colorPalette.o.light1,
+            overlay: `${colorPalette.o.light1}cc`,
+        },
+    },
+};
 
 export const GlobalStyles = createGlobalStyle`
     html, body {
@@ -84,8 +107,10 @@ export const InnerGrid = props => (
 );
 
 const MarkSVG = styled.svg`
-    fill: ${props => props.fill};
-    background: ${({ background, overlay }) => `${background}${overlay ? '80' : ''}`};
+    ${({ colors, darker, overlay }) => `
+        fill: ${colors.fill};
+        background: ${colors[`background${darker ? 'Darker' : ''}`][overlay ? 'overlay' : 'solid']};
+    `}
 
     ${({ overlay }) => {
         const padding = overlay ? '15px' : '10px';
@@ -105,9 +130,7 @@ const MarkSVG = styled.svg`
 
 export function X(props) {
     return (
-        <MarkSVG {...props} viewBox="0 0 100 100"
-            fill={colors.x.normal} background={colors.x.light2}
-        >
+        <MarkSVG {...props} viewBox="0 0 100 100" colors={colors.x} >
             <path d="M 100,0 59.463724,49.429148 99.921137,100 H 81.861201 L 49.842271,58.831431 17.0347,100 H 0 L 40.9306,50.033579 0.94637224,0 H 18.927445 L 50.552054,40.631296 82.886436,0 Z" />
         </MarkSVG>
     );
@@ -115,9 +138,7 @@ export function X(props) {
 
 export function O(props) {
     return (
-        <MarkSVG {...props} viewBox="0 0 100 100"
-            fill={colors.o.normal} background={colors.o.light2}
-        >
+        <MarkSVG {...props} viewBox="0 0 100 100" colors={colors.o} >
             <path d="M 50,0 C 22.385763,0 0,22.385763 0,50 0,77.614237 22.385763,100 50,100 77.614237,100 100,77.614237 100,50 100,22.385763 77.614237,0 50,0 Z m 0,13 C 70.98682,13 87,29.01318 87,50 87,70.98682 70.98682,87 50,87 29.01318,87 13,70.98682 13,50 13,29.01318 29.01318,13 50,13 Z" />
         </MarkSVG>
     );
@@ -128,7 +149,7 @@ export const Empty = styled.div`
     height: 100%;
     ${props => props.clickable && `
         &: hover {
-            background: ${colors[props.clickable].light2};
+            background: ${colors[props.clickable].hover};
         }
     `}
 `;

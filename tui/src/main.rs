@@ -151,9 +151,9 @@ fn main() {
                         match result {
                             GameOverResult::Draw =>
                                 ui.outer_square_draw(outer, style),
-                            GameOverResult::Winner(Piece::X) =>
+                            GameOverResult::Winner(Piece::X, _) =>
                                 ui.outer_square_x(outer, style.fg(X_COLOR)),
-                            GameOverResult::Winner(Piece::O) =>
+                            GameOverResult::Winner(Piece::O, _) =>
                                 ui.outer_square_o(outer, style.fg(O_COLOR)),
                         }
                     }
@@ -163,7 +163,7 @@ fn main() {
                         ui.reset_cursor_position();
                         println!("Game Over: {}", match result {
                             GameOverResult::Draw => "It was a draw!".into(),
-                            GameOverResult::Winner(winner) => format!("{:?} Won", winner),
+                            GameOverResult::Winner(winner, _) => format!("{:?} Won", winner),
                         });
                         break;
                     }

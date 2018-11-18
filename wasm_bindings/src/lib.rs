@@ -46,8 +46,8 @@ impl From<GameOverResult> for JsCompleteState {
     fn from(result: GameOverResult) -> Self {
         match result {
             GameOverResult::Draw => JsCompleteState::Draw,
-            GameOverResult::Winner(Piece::X) => JsCompleteState::X,
-            GameOverResult::Winner(Piece::O) => JsCompleteState::O,
+            GameOverResult::Winner(Piece::X, _) => JsCompleteState::X,
+            GameOverResult::Winner(Piece::O, _) => JsCompleteState::O,
         }
     }
 }
@@ -56,6 +56,8 @@ impl From<GameOverResult> for JsCompleteState {
 pub struct JsInnerGrid {
     pub grid: [[Option<JsPiece>; SIZE]; SIZE],
     pub completed: Option<JsCompleteState>,
+    #[serde(rename = "winningTriple")]
+    pub winning_triple: Option<((usize, usize), (usize, usize), (usize, usize))>,
 }
 
 #[derive(Serialize, Deserialize)]
@@ -65,6 +67,8 @@ pub struct JsGame {
     pub state: String,
     #[serde(rename = "activeOuterSquare")]
     pub active_outer_square: Option<JsCoord>,
+    #[serde(rename = "winningTriple")]
+    pub winning_triple: Option<((usize, usize), (usize, usize), (usize, usize))>,
 }
 
 #[derive(Serialize, Deserialize, Clone, Copy)]
@@ -86,6 +90,7 @@ fn game_to_jsgame(game: &Game) -> JsValue {
     let mut grid = [[JsInnerGrid {
         grid: [[None; SIZE]; SIZE],
         completed: None,
+        winning_triple: None,
     }; SIZE]; SIZE];
 
     for ox in 0..SIZE {
@@ -106,6 +111,10 @@ fn game_to_jsgame(game: &Game) -> JsValue {
                 OuterSquare::Incomplete => None,
                 OuterSquare::Complete(result) => Some(result.into()),
             };
+            grid[ox][oy].winning_triple = match game.get_outer_square(&coord) {
+                OuterSquare::Complete(GameOverResult::Winner(_, triple)) => Some(triple),
+                _ => None,
+            };
         }
     }
 
@@ -114,9 +123,14 @@ fn game_to_jsgame(game: &Game) -> JsValue {
     let state = match game.state() {
         InProgress => "in-progress",
         GameOver(Draw) => "draw",
-        GameOver(Winner(Piece::X)) => "x-wins",
-        GameOver(Winner(Piece::O)) => "o-wins",
+        GameOver(Winner(Piece::X, _)) => "x-wins",
+        GameOver(Winner(Piece::O, _)) => "o-wins",
     }.into();
+
+    let winning_triple = match game.state() {
+        GameOver(Winner(_, triple)) => Some(triple),
+        _ => None,
+    };
 
     let active_outer_square = game
         .active_outer_square()
@@ -127,6 +141,7 @@ fn game_to_jsgame(game: &Game) -> JsValue {
         turn: game.turn().into(),
         state,
         active_outer_square,
+        winning_triple,
     };
 
     JsValue::from_serde(&game).unwrap()
@@ -139,8 +154,8 @@ fn jsgame_to_game(js_game: &JsGame) -> Game {
     let state = match &js_game.state[..] {
         "in-progress" => InProgress,
         "draw" => GameOver(Draw),
-        "x-wins" => GameOver(Winner(Piece::X)),
-        "o-wins" => GameOver(Winner(Piece::O)),
+        "x-wins" => GameOver(Winner(Piece::X, js_game.winning_triple.unwrap())),
+        "o-wins" => GameOver(Winner(Piece::O, js_game.winning_triple.unwrap())),
         _ => InProgress,
     };
 
@@ -162,8 +177,10 @@ fn jsgame_to_game(js_game: &JsGame) -> Game {
             outer_board[ox][oy] = match inner_grid.completed {
                 None => OuterSquare::Incomplete,
                 Some(JsCompleteState::Draw) => OuterSquare::Complete(Draw),
-                Some(JsCompleteState::X) => OuterSquare::Complete(Winner(Piece::X)),
-                Some(JsCompleteState::O) => OuterSquare::Complete(Winner(Piece::O)),
+                Some(JsCompleteState::X) => OuterSquare::Complete(
+                    Winner(Piece::X, inner_grid.winning_triple.unwrap())),
+                Some(JsCompleteState::O) => OuterSquare::Complete(
+                    Winner(Piece::O, inner_grid.winning_triple.unwrap())),
             };
 
             for ix in 0..SIZE {

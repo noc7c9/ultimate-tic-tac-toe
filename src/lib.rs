@@ -102,14 +102,20 @@ impl FilledSquare for OuterSquare {
         if let OuterSquare::Complete(_) = self { true } else { false }
     }
     fn filling_piece(&self) -> Option<Piece> {
-        if let OuterSquare::Complete(GameOverResult::Winner(piece)) = self { Some(*piece) } else { None }
+        match self {
+            OuterSquare::Complete(GameOverResult::Winner(piece, _)) => Some(*piece),
+            _ => None,
+        }
     }
 }
 
 #[derive(Copy, Clone, PartialEq, Debug)]
 pub enum GameOverResult {
     Draw,
-    Winner(Piece),
+    Winner(
+        Piece,
+        ((usize, usize), (usize, usize), (usize, usize)),
+    ),
 }
 
 #[derive(Copy, Clone, PartialEq, Debug)]
@@ -118,6 +124,7 @@ pub enum GameState {
     GameOver(GameOverResult),
 }
 
+#[derive(Debug)]
 pub struct Game {
     pub state: GameState,
     pub board: [[[[Square; SIZE]; SIZE]; SIZE]; SIZE],
@@ -252,9 +259,7 @@ impl Game {
     }
 }
 
-fn check_result<T>(board: &[[T; SIZE]; SIZE]) -> Option<GameOverResult>
-    where T: FilledSquare + PartialEq
-{
+fn check_result<T: FilledSquare>(board: &[[T; SIZE]; SIZE]) -> Option<GameOverResult> {
     const WINNING_TRIPLES: [(usize, usize, usize, usize, usize, usize); 8] = [
         // Columns
         (0, 0,  0, 1,  0, 2),
@@ -270,13 +275,16 @@ fn check_result<T>(board: &[[T; SIZE]; SIZE]) -> Option<GameOverResult>
     ];
 
     for (x0, y0,  x1, y1,  x2, y2) in WINNING_TRIPLES.iter() {
-        let a = &board[*x0][*y0];
-        let b = &board[*x1][*y1];
-        let c = &board[*x2][*y2];
+        let a = &board[*x0][*y0].filling_piece();
+        let b = &board[*x1][*y1].filling_piece();
+        let c = &board[*x2][*y2].filling_piece();
 
         if a == b && b == c {
-            if let Some(winner) = a.filling_piece() {
-                return Some(GameOverResult::Winner(winner));
+            if let Some(winner) = a {
+                return Some(GameOverResult::Winner(
+                    *winner,
+                    ((*x0, *y0), (*x1, *y1), (*x2, *y2))
+                ));
             }
         }
     };
@@ -393,8 +401,12 @@ mod tests {
             (target, (0, 2)), // winning target square
         ]);
 
-        assert_eq!(game.get_outer_square(&ct(target)),
-            OuterSquare::Complete(GameOverResult::Winner(Piece::X)));
+        let winner = match game.get_outer_square(&ct(target)) {
+            OuterSquare::Complete(GameOverResult::Winner(piece, _)) => Some(piece),
+            _ => None,
+        };
+
+        assert_eq!(winner, Some(Piece::X));
     }
 
     #[test]
@@ -426,12 +438,44 @@ mod tests {
         ]);
 
         let moves = game.get_moves();
-        let expected_move_count = (
-            SIZE * SIZE * SIZE * SIZE
+        let expected_move_count = SIZE * SIZE * SIZE * SIZE
             - 3 // minus the three filled moves outside the completed square
-            - SIZE * SIZE // minus the completed square
-        );
+            - SIZE * SIZE; // minus the completed square
         assert_eq!(moves.len(), expected_move_count);
+    }
+
+    #[test]
+    fn completing_the_game_sets_state_with_winner_and_winning_triple() {
+        let game = game_with_moves(vec![
+            ((1, 1), (1, 0)),
+            ((1, 0), (1, 1)),
+            ((1, 1), (1, 2)),
+            ((1, 2), (1, 1)),
+            ((1, 1), (1, 1)),
+            ((1, 0), (0, 1)),
+            ((0, 1), (1, 1)),
+            ((0, 0), (0, 1)),
+            ((0, 1), (0, 1)),
+            ((0, 1), (2, 0)),
+            ((2, 0), (1, 1)),
+            ((2, 0), (0, 1)),
+            ((0, 1), (2, 1)),
+            ((2, 1), (0, 1)),
+            ((2, 1), (2, 1)),
+            ((2, 1), (0, 2)),
+            ((0, 2), (0, 1)),
+            ((1, 2), (2, 1)),
+            ((2, 1), (2, 2)),
+            ((2, 2), (2, 1)),
+            ((2, 1), (2, 0)),
+        ]);
+
+        let (winner, triple) = match game.state {
+            GameState::GameOver(GameOverResult::Winner(piece, triple)) => (Some(piece), Some(triple)),
+            _ => (None, None),
+        };
+        assert_eq!(winner, Some(Piece::X));
+        assert_eq!(triple, Some(((0, 1), (1, 1), (2, 1))));
     }
 
 }
